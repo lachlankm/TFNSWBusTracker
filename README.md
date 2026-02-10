@@ -35,12 +35,6 @@ npm install
 npm run dev
 ```
 
-## Upload to GitHub
-
-- `.env` is ignored and will not be uploaded.
-- Keep secrets only in `.env`, and only commit `.env.example`.
-- `node_modules` and `dist` are ignored.
-- A CI workflow is included at `.github/workflows/ci.yml` to run `npm ci` and `npm run build` on pushes/PRs.
 
 ## Troubleshooting: "Failed to fetch"
 
