@@ -174,7 +174,7 @@ export default function App() {
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 3xl:max-w-[1760px] 3xl:px-10 4xl:max-w-[2240px]">
         <header className="mb-6 rounded-2xl bg-gradient-to-r from-brand-700 to-brand-500 p-5 text-white">
           <h1 className="text-2xl font-bold">Sydney Bus Tracker</h1>
           <p className="mt-1 text-sm text-blue-50">
@@ -185,16 +185,16 @@ export default function App() {
           </p>
         </header>
 
-        <section className="mb-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <section className="mb-4 grid gap-3 sm:grid-cols-3 3xl:grid-cols-6">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 3xl:col-span-2">
             <p className="text-xs uppercase tracking-wide text-slate-500">Buses visible</p>
             <p className="mt-1 text-2xl font-bold text-slate-900">{filteredBusesForList.length}</p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 3xl:col-span-2">
             <p className="text-xs uppercase tracking-wide text-slate-500">Active routes</p>
             <p className="mt-1 text-2xl font-bold text-slate-900">{activeRouteCount}</p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 3xl:col-span-2">
             <p className="text-xs uppercase tracking-wide text-slate-500">Status</p>
             <p className="mt-1 text-sm font-semibold text-slate-800">
               {loading ? "Loading feed..." : "Live"}
@@ -213,15 +213,15 @@ export default function App() {
           </div>
         )}
 
-        <section className="grid gap-4 lg:grid-cols-5">
-          <div className="lg:col-span-2">
+        <section className="grid gap-4 lg:grid-cols-5 3xl:grid-cols-12">
+          <div className="lg:col-span-2 3xl:col-span-4">
             <BusList
               buses={filteredBusesForList}
               selectedBusId={selectedBusId}
               onSelectBus={handleSelectBus}
             />
           </div>
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 3xl:col-span-8">
             <BusMap
               buses={filteredBusesForMap}
               selectedBusId={selectedBus?.id || null}

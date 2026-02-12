@@ -63,7 +63,7 @@ function BusMap({ buses, selectedBusId, trackedBusId, onSelectBus }) {
   }, [selectedBus, trackedBus]);
 
   return (
-    <div className="h-[28rem] overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <div className="h-[28rem] 3xl:h-[34rem] 4xl:h-[38rem] overflow-hidden rounded-xl border border-slate-200 bg-white">
       <MapContainer center={center} zoom={11} scrollWheelZoom className="h-full w-full">
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

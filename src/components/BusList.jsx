@@ -20,7 +20,7 @@ export default function BusList({ buses, selectedBusId, onSelectBus }) {
   }
 
   return (
-    <div className="h-[28rem] overflow-auto rounded-xl border border-slate-200 bg-white">
+    <div className="h-[28rem] 3xl:h-[34rem] 4xl:h-[38rem] overflow-auto rounded-xl border border-slate-200 bg-white">
       <ul className="divide-y divide-slate-100">
         {sortedBuses.map((bus) => {
           const isSelected = bus.id === selectedBusId;
