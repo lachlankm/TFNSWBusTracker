@@ -8,7 +8,7 @@ A web app that tracks live buses around Sydney using the TFNSW GTFS real-time ve
 - Search bar for route number/id
 - Live bus list with route and speed
 - Next departures panel based on GTFS trip updates
-- Stop names resolved from GTFS static `stops.txt`
+- Stop names resolved on-demand through a server-cached GTFS static `stops.txt`
 - Auto refresh every 20 seconds
 
 ## TFNSW API setup
@@ -28,7 +28,7 @@ You need a TFNSW Open Data API key.
 The app defaults to the Vite proxy endpoints:
 - `/api/gtfs/vehiclepos/buses`
 - `/api/gtfs/realtime/buses`
-- `/api/gtfs-static/buses`
+- `/api/stop-names?ids=...`
 
 ## Run
 

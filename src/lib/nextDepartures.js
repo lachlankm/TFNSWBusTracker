@@ -1,12 +1,21 @@
 const MAX_DEFAULT_DEPARTURES = 6;
 const MIN_PAST_GRACE_MS = 60_000;
 
+function buildDepartureId(departure) {
+  const routeKey = departure.routeId || "_";
+  const tripKey = departure.tripId || "_";
+  const vehicleKey = departure.vehicleId || "_";
+  const stopKey = departure.stopId || "_";
+  const stopSequenceKey = Number.isFinite(departure.stopSequence) ? String(departure.stopSequence) : "_";
+  return [routeKey, tripKey, vehicleKey, stopKey, stopSequenceKey, departure.eventTimeMs].join(":");
+}
+
 function normalizeDeparture(departure, matchType, stopNamesById) {
   const stopId = departure.stopId || "";
   const stopName = stopId && stopNamesById instanceof Map ? stopNamesById.get(stopId) || "" : "";
 
   return {
-    id: `${departure.tripId}:${stopId}:${departure.eventTimeMs}`,
+    id: buildDepartureId(departure),
     routeId: departure.routeId,
     tripId: departure.tripId,
     stopId,

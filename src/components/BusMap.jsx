@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
-import { MapContainer, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
 
 const SYDNEY_CENTER = [-33.8688, 151.2093];
 
@@ -100,6 +100,16 @@ function MapLayoutController({ layoutVersion }) {
       cancelAnimationFrame(frameId);
     };
   }, [map]);
+
+  return null;
+}
+
+function MapSelectionController({ onSelectBus }) {
+  useMapEvents({
+    click() {
+      onSelectBus(null, { track: true });
+    },
+  });
 
   return null;
 }
@@ -219,6 +229,7 @@ function BusMap({ buses, selectedBusId, trackedBusId, onSelectBus, layoutVersion
 
         <MapViewportController trackedBus={trackedBus} />
         <MapLayoutController layoutVersion={layoutVersion} />
+        <MapSelectionController onSelectBus={onSelectBus} />
         <EmojiBusLayer
           buses={buses}
           selectedBusId={selectedBusId}

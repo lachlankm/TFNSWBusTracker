@@ -5,7 +5,7 @@ import StopsPanel from "./components/StopsPanel";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { buildNextDepartures } from "./lib/nextDepartures";
 import { fetchSydneyBuses } from "./lib/tfnswApi";
-import { fetchStopNamesById } from "./lib/tfnswStaticStopsApi";
+import { fetchStopNamesByIds } from "./lib/tfnswStaticStopsApi";
 import { fetchBusTripUpdates } from "./lib/tfnswTripUpdatesApi";
 
 const REFRESH_INTERVAL_MS = 20_000;
@@ -33,7 +33,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [tripUpdatesError, setTripUpdatesError] = useState("");
   const [stopNamesError, setStopNamesError] = useState("");
-  const [stopNamesById, setStopNamesById] = useState(null);
+  const [stopNamesById, setStopNamesById] = useState(() => new Map());
   const [lastUpdatedMs, setLastUpdatedMs] = useState(0);
   const [isStopsCollapsed, setIsStopsCollapsed] = useState(false);
 
@@ -116,30 +116,6 @@ export default function App() {
     };
   }, [loadBuses]);
 
-  useEffect(() => {
-    let isActive = true;
-
-    fetchStopNamesById()
-      .then((stopNamesLookup) => {
-        if (!isActive) {
-          return;
-        }
-        setStopNamesById(stopNamesLookup);
-        setStopNamesError("");
-      })
-      .catch((loadError) => {
-        if (!isActive || loadError?.name === "AbortError") {
-          return;
-        }
-        setStopNamesById(null);
-        setStopNamesError(loadError?.message || "Unable to load stop names.");
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
   const normalizedSearchQuery = useMemo(() => searchInput.trim().toLowerCase(), [searchInput]);
   const mapSearchQuery = useDebouncedValue(normalizedSearchQuery, MAP_SEARCH_DEBOUNCE_MS);
 
@@ -172,6 +148,61 @@ export default function App() {
     () => selectedBus || trackedBus || null,
     [selectedBus, trackedBus]
   );
+
+  const departuresModelBase = useMemo(
+    () =>
+      buildNextDepartures({
+        bus: departuresTargetBus,
+        tripUpdates,
+        stopNamesById: null,
+        includeRouteFallback: false,
+        limit: 10,
+      }),
+    [departuresTargetBus, tripUpdates]
+  );
+
+  const departureStopIds = useMemo(
+    () => [...new Set(departuresModelBase.items.map((departure) => departure.stopId).filter(Boolean))],
+    [departuresModelBase.items]
+  );
+
+  useEffect(() => {
+    if (!departureStopIds.length) {
+      setStopNamesError("");
+      return;
+    }
+
+    const controller = new AbortController();
+
+    fetchStopNamesByIds(departureStopIds, { signal: controller.signal })
+      .then((resolvedStopNamesById) => {
+        setStopNamesById((current) => {
+          let hasChanges = false;
+          const next = new Map(current);
+
+          for (const [stopId, stopName] of resolvedStopNamesById) {
+            if (next.get(stopId) === stopName) {
+              continue;
+            }
+            hasChanges = true;
+            next.set(stopId, stopName);
+          }
+
+          return hasChanges ? next : current;
+        });
+        setStopNamesError("");
+      })
+      .catch((loadError) => {
+        if (loadError?.name === "AbortError") {
+          return;
+        }
+        setStopNamesError(loadError?.message || "Unable to load stop names.");
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [departureStopIds]);
 
   const departuresModel = useMemo(
     () =>

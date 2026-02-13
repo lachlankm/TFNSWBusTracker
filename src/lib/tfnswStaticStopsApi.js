@@ -1,122 +1,96 @@
-import { strFromU8, unzipSync } from "fflate";
-import Papa from "papaparse";
+const STOP_NAMES_LOOKUP_PATH = "/api/stop-names";
+const REQUEST_CHUNK_SIZE = 250;
 
-const STATIC_STOPS_PROXY_PATHS = ["/api/gtfs-static/buses", "/api/gtfs-static/sydney-buses"];
+const stopNamesByIdCache = new Map();
+const unresolvedStopIds = new Set();
 
-let stopNamesByIdPromise = null;
-let stopNamesByIdCache = null;
+function normalizeStopIds(stopIds) {
+  if (!Array.isArray(stopIds)) {
+    return [];
+  }
 
-function parseStopsCsv(stopsCsvText) {
-  const normalizedText = String(stopsCsvText || "").replace(/^\uFEFF/, "");
-  const parsed = Papa.parse(normalizedText, {
-    header: true,
-    skipEmptyLines: true,
-    transformHeader: (header) => String(header || "").replace(/^\uFEFF/, "").trim().toLowerCase(),
-  });
+  return [...new Set(stopIds.map((stopId) => String(stopId || "").trim()).filter(Boolean))];
+}
 
-  if (parsed.errors?.length && !parsed.data?.length) {
-    const firstError = parsed.errors[0];
+function buildResultMap(stopIds) {
+  const result = new Map();
+  for (const stopId of stopIds) {
+    const stopName = stopNamesByIdCache.get(stopId);
+    if (stopName) {
+      result.set(stopId, stopName);
+    }
+  }
+  return result;
+}
+
+function chunkArray(items, chunkSize) {
+  const chunks = [];
+  for (let index = 0; index < items.length; index += chunkSize) {
+    chunks.push(items.slice(index, index + chunkSize));
+  }
+  return chunks;
+}
+
+async function requestStopNamesChunk(stopIds, signal) {
+  const response = await fetch(
+    `${STOP_NAMES_LOOKUP_PATH}?ids=${encodeURIComponent(stopIds.join(","))}`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+      signal,
+    }
+  );
+
+  if (!response.ok) {
+    const bodyText = await response.text();
     throw new Error(
-      `Unable to parse GTFS stops.txt (${firstError?.message || "unknown parse error"}).`
+      `${response.status} ${response.statusText}: ${bodyText || "Unable to fetch stop names."}`
     );
   }
 
-  const stopNamesById = new Map();
-  for (const row of parsed.data || []) {
-    const stopId = String(row?.stop_id || "").trim();
-    const stopName = String(row?.stop_name || "").trim();
+  const payload = await response.json();
+  const namesObject = payload?.stopNamesById;
+  const missingIds = Array.isArray(payload?.missingIds)
+    ? payload.missingIds.map((id) => String(id || "").trim()).filter(Boolean)
+    : [];
 
-    if (!stopId || !stopName) {
-      continue;
+  if (namesObject && typeof namesObject === "object") {
+    for (const [stopId, stopName] of Object.entries(namesObject)) {
+      const normalizedId = String(stopId || "").trim();
+      const normalizedName = String(stopName || "").trim();
+      if (!normalizedId || !normalizedName) {
+        continue;
+      }
+      unresolvedStopIds.delete(normalizedId);
+      stopNamesByIdCache.set(normalizedId, normalizedName);
     }
-
-    stopNamesById.set(stopId, stopName);
   }
 
-  if (!stopNamesById.size) {
-    throw new Error("GTFS stops feed contained no valid stop names.");
+  for (const stopId of missingIds) {
+    if (!stopNamesByIdCache.has(stopId)) {
+      unresolvedStopIds.add(stopId);
+    }
   }
-
-  return stopNamesById;
 }
 
-function extractStopsCsvFromZip(arrayBuffer) {
-  const zipEntries = unzipSync(new Uint8Array(arrayBuffer));
-  const stopsFileName = Object.keys(zipEntries).find((name) =>
-    name.toLowerCase().endsWith("stops.txt")
+export async function fetchStopNamesByIds(stopIds, { signal } = {}) {
+  const normalizedStopIds = normalizeStopIds(stopIds);
+  if (!normalizedStopIds.length) {
+    return new Map();
+  }
+
+  const missingStopIds = normalizedStopIds.filter(
+    (stopId) => !stopNamesByIdCache.has(stopId) && !unresolvedStopIds.has(stopId)
   );
 
-  if (!stopsFileName) {
-    throw new Error("GTFS static ZIP did not include stops.txt.");
-  }
-
-  return strFromU8(zipEntries[stopsFileName]);
-}
-
-async function loadStopNamesById() {
-  const errors = [];
-
-  for (const path of STATIC_STOPS_PROXY_PATHS) {
-    const response = await fetch(path, {
-      method: "GET",
-      headers: {
-        Accept: "application/zip",
-      },
-    });
-
-    if (!response.ok) {
-      const bodyText = await response.text();
-      errors.push(
-        `${path} ${response.status} ${response.statusText}: ${bodyText || "No response body"}`
-      );
-      continue;
+  if (missingStopIds.length) {
+    const chunks = chunkArray(missingStopIds, REQUEST_CHUNK_SIZE);
+    for (const chunk of chunks) {
+      await requestStopNamesChunk(chunk, signal);
     }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const stopsCsvText = extractStopsCsvFromZip(arrayBuffer);
-    return parseStopsCsv(stopsCsvText);
   }
 
-  throw new Error(
-    `Unable to fetch GTFS static stops. Tried ${STATIC_STOPS_PROXY_PATHS.join(", ")}. Details: ${errors.join(
-      " | "
-    )}`
-  );
-}
-
-export async function fetchStopNamesById({ signal } = {}) {
-  if (stopNamesByIdCache instanceof Map) {
-    return stopNamesByIdCache;
-  }
-
-  if (!stopNamesByIdPromise) {
-    stopNamesByIdPromise = loadStopNamesById()
-      .then((stopNamesById) => {
-        stopNamesByIdCache = stopNamesById;
-        return stopNamesById;
-      })
-      .catch((error) => {
-        stopNamesByIdPromise = null;
-        throw error;
-      });
-  }
-
-  if (signal?.aborted) {
-    throw new DOMException("Aborted", "AbortError");
-  }
-
-  if (signal) {
-    return Promise.race([
-      stopNamesByIdPromise,
-      new Promise((_, reject) => {
-        signal.addEventListener(
-          "abort",
-          () => reject(new DOMException("Aborted", "AbortError")),
-          { once: true }
-        );
-      }),
-    ]);
-  }
-
-  return stopNamesByIdPromise;
+  return buildResultMap(normalizedStopIds);
 }
