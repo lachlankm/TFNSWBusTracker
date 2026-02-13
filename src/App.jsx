@@ -13,6 +13,11 @@ const REFRESH_INTERVAL_MS = 10_000;
 const MAP_SEARCH_DEBOUNCE_MS = 250;
 const DESKTOP_OPEN_COLUMNS = "minmax(0, 7fr) minmax(20rem, 3fr)";
 const DESKTOP_COLLAPSED_COLUMNS = "minmax(0, 1fr) 3.75rem";
+const MAP_THEME_OPTIONS = [
+  { value: "standard", label: "OpenStreetMap" },
+  { value: "light", label: "CARTO Light" },
+  { value: "dark", label: "CARTO Dark" },
+];
 
 function formatLastUpdated(timestamp) {
   if (!timestamp) return "Never";
@@ -38,6 +43,7 @@ export default function App() {
   const [stopNamesById, setStopNamesById] = useState(() => new Map());
   const [lastUpdatedMs, setLastUpdatedMs] = useState(0);
   const [isStopsCollapsed, setIsStopsCollapsed] = useState(false);
+  const [mapTheme, setMapTheme] = useState("standard");
 
   const loadBuses = useCallback(async (signal) => {
     try {
@@ -276,6 +282,21 @@ export default function App() {
           <div className="h-card app-map-panel">
             <div className="app-panel-heading">
               <h2 className="app-panel-title">Map</h2>
+              <label className="app-map-theme-control">
+                <span className="app-map-theme-label">Theme</span>
+                <select
+                  className="app-map-theme-select"
+                  value={mapTheme}
+                  onChange={(event) => setMapTheme(event.target.value)}
+                  aria-label="Map theme"
+                >
+                  {MAP_THEME_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
             <div className="app-map-surface">
               <BusMap
@@ -284,19 +305,23 @@ export default function App() {
                 trackedBusId={trackedBus?.id || null}
                 onSelectBus={handleSelectBus}
                 layoutVersion={isStopsCollapsed}
+                mapTheme={mapTheme}
               />
             </div>
           </div>
 
           <aside className={`h-card app-stops-panel ${isStopsCollapsed ? "is-collapsed" : ""}`}>
             <div className="app-panel-heading">
-              <h2 className="app-panel-title">{isStopsCollapsed ? "S" : stopsPanelTitle}</h2>
+              <h2 className="app-panel-title">{isStopsCollapsed ? "Stops" : stopsPanelTitle}</h2>
               <button
                 type="button"
-                className="h-btn h-btn-primary app-collapse-btn"
+                className={`h-btn h-btn-primary app-collapse-btn ${
+                  isStopsCollapsed ? "is-collapsed" : ""
+                }`}
                 onClick={() => setIsStopsCollapsed((current) => !current)}
                 aria-expanded={!isStopsCollapsed}
                 aria-controls="stops-panel-body"
+                aria-label={isStopsCollapsed ? "Expand stops panel" : "Collapse stops panel"}
               >
                 {isStopsCollapsed ? ">" : "<"}
               </button>

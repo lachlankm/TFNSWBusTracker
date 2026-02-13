@@ -4,6 +4,22 @@ import { MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { getPublicRouteName } from "../lib/gtfsRealtime";
 
 const SYDNEY_CENTER = [-33.8688, 151.2093];
+const MAP_THEMES = {
+  standard: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  },
+  light: {
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  },
+  dark: {
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  },
+};
 
 function hasCoordinates(bus) {
   return Number.isFinite(bus?.lat) && Number.isFinite(bus?.lon);
@@ -229,7 +245,7 @@ function EmojiBusLayer({ buses, selectedBusId, trackedBusId, onSelectBus }) {
   return null;
 }
 
-function BusMap({ buses, selectedBusId, trackedBusId, onSelectBus, layoutVersion }) {
+function BusMap({ buses, selectedBusId, trackedBusId, onSelectBus, layoutVersion, mapTheme }) {
   const selectedBus = useMemo(
     () => buses.find((bus) => bus.id === selectedBusId) || null,
     [buses, selectedBusId]
@@ -245,14 +261,12 @@ function BusMap({ buses, selectedBusId, trackedBusId, onSelectBus, layoutVersion
     if (hasCoordinates(selectedBus)) return [selectedBus.lat, selectedBus.lon];
     return SYDNEY_CENTER;
   }, [selectedBus, trackedBus]);
+  const activeTheme = MAP_THEMES[mapTheme] || MAP_THEMES.standard;
 
   return (
     <div className="h-full min-h-0 overflow-hidden rounded-2xl">
       <MapContainer center={center} zoom={11} scrollWheelZoom className="h-full w-full">
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <TileLayer key={mapTheme} attribution={activeTheme.attribution} url={activeTheme.url} />
 
         <MapViewportController trackedBus={trackedBus} />
         <MapLayoutController layoutVersion={layoutVersion} />
