@@ -565,6 +565,8 @@ body {
 
 .bus-popup {
   min-width: 180px;
+  width: max-content;
+  max-width: min(80vw, 32rem);
 }
 
 .bus-popup-header {
@@ -626,11 +628,12 @@ body {
   color: var(--text-primary);
   font-size: 0.8rem;
   font-weight: 600;
+  flex: 1;
+  min-width: 0;
   text-align: right;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 140px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .bus-popup-trip {

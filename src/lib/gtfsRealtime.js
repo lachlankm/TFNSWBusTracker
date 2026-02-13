@@ -59,6 +59,15 @@ message VehicleDescriptor {
   optional string id = 1;
   optional string label = 2;
   optional string license_plate = 3;
+  extensions 1000 to 1999;
+}
+
+message TfnswVehicleDescriptor {
+  optional bool air_conditioned = 1 [default = false];
+  optional int32 wheelchair_accessible = 2;
+  optional string vehicle_model = 3;
+  optional bool performing_prior_trip = 4 [default = false];
+  optional int32 special_vehicle_attributes = 5;
 }
 
 message Position {
@@ -76,6 +85,10 @@ message VehiclePosition {
   optional uint64 timestamp = 5;
   optional string stop_id = 7;
   optional VehicleDescriptor vehicle = 8;
+}
+
+extend transit_realtime.VehicleDescriptor {
+  optional TfnswVehicleDescriptor tfnsw_vehicle_descriptor = 1007;
 }
 `;
 
@@ -98,6 +111,30 @@ function toTimestampMs(value) {
   const asNumber = toNumber(value);
   if (!Number.isFinite(asNumber)) return null;
   return asNumber * 1000;
+}
+
+function extractVehicleModel(vehicleDescriptor) {
+  if (!vehicleDescriptor) return "";
+
+  const descriptor =
+    vehicleDescriptor.tfnswVehicleDescriptor ||
+    vehicleDescriptor.tfnsw_vehicle_descriptor ||
+    vehicleDescriptor[".transit_realtime.tfnswVehicleDescriptor"] ||
+    vehicleDescriptor[".transit_realtime.tfnsw_vehicle_descriptor"] ||
+    vehicleDescriptor["transit_realtime.tfnswVehicleDescriptor"] ||
+    vehicleDescriptor["transit_realtime.tfnsw_vehicle_descriptor"];
+
+  if (!descriptor) return "";
+
+  return descriptor.vehicleModel || descriptor.vehicle_model || "";
+}
+
+function normalizeVehicleModel(model) {
+  if (!model) return "";
+  return String(model)
+    .replaceAll("~", " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function decodeBusVehiclePositions(arrayBuffer) {
@@ -142,6 +179,7 @@ export function decodeBusVehiclePositions(arrayBuffer) {
         tripId: vehicle.trip?.tripId || "",
         vehicleId: vehicle.vehicle?.id || "",
         vehicleLabel: vehicle.vehicle?.label || "",
+        vehicleModel: normalizeVehicleModel(extractVehicleModel(vehicle.vehicle)),
         stopId: vehicle.stopId || "",
         speedKmh: Number.isFinite(speedMs) ? Math.round(speedMs * 3.6) : null,
         timestamp: Number.isFinite(timestamp) ? timestamp : null,

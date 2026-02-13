@@ -20,6 +20,7 @@ function escapeHtml(value) {
 function popupHtml(bus) {
   const route = escapeHtml(bus.routeId || "Unknown");
   const vehicle = escapeHtml(bus.vehicleLabel || bus.vehicleId || "N/A");
+  const model = escapeHtml(bus.vehicleModel || "N/A");
   const trip = escapeHtml(bus.tripId || "N/A");
   const speed = bus.speedKmh != null ? `${bus.speedKmh} km/h` : "N/A";
 
@@ -32,6 +33,10 @@ function popupHtml(bus) {
     <div class="bus-popup-row">
       <span class="bus-popup-label">Vehicle</span>
       <span class="bus-popup-value">${vehicle}</span>
+    </div>
+    <div class="bus-popup-row">
+      <span class="bus-popup-label">Model</span>
+      <span class="bus-popup-value">${model}</span>
     </div>
     <div class="bus-popup-row">
       <span class="bus-popup-label">Trip</span>
@@ -61,6 +66,8 @@ function createBusIcon(isTrackedOrSelected) {
 
 const DEFAULT_BUS_ICON = createBusIcon(false);
 const HIGHLIGHTED_BUS_ICON = createBusIcon(true);
+const POPUP_MIN_WIDTH = 180;
+const POPUP_MAX_WIDTH = 560;
 
 function MapViewportController({ trackedBus }) {
   const map = useMap();
@@ -197,7 +204,10 @@ function EmojiBusLayer({ buses, selectedBusId, trackedBusId, onSelectBus }) {
       if (!marker) {
         marker = L.marker(nextLatLng, { icon: nextIcon });
         marker.on("click", () => onSelectBus(bus.id, { track: true }));
-        marker.bindPopup(nextPopupHtml);
+        marker.bindPopup(nextPopupHtml, {
+          minWidth: POPUP_MIN_WIDTH,
+          maxWidth: POPUP_MAX_WIDTH,
+        });
         marker.addTo(layerGroup);
         markersById.set(bus.id, marker);
         continue;

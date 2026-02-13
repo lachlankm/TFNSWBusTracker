@@ -32,6 +32,7 @@ export default function StopsPanel({ bus, departuresModel, loading, error }) {
     <div className="app-stops-content">
       <div className="app-stops-meta">
         <p className="app-stops-route">Route {bus.routeId || "Unknown"}</p>
+        {bus.vehicleModel && <p className="app-stops-basis">Model {bus.vehicleModel}</p>}
         <p className="app-stops-basis">{basisLabel(basis)}</p>
       </div>
 
