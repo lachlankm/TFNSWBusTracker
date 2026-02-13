@@ -22,7 +22,27 @@ function popupHtml(bus) {
   const vehicle = escapeHtml(bus.vehicleLabel || bus.vehicleId || "N/A");
   const trip = escapeHtml(bus.tripId || "N/A");
   const speed = bus.speedKmh != null ? `${bus.speedKmh} km/h` : "N/A";
-  return `<div class="text-sm"><div class="font-semibold">Route ${route}</div><div>Vehicle: ${vehicle}</div><div>Trip: ${trip}</div><div>Speed: ${speed}</div></div>`;
+
+  return `<div class="bus-popup">
+  <div class="bus-popup-header">
+    <!-- <span class="bus-popup-badge">${route}</span> -->
+    <span class="bus-popup-heading">Route ${route}</span>
+  </div>
+  <div class="bus-popup-body">
+    <div class="bus-popup-row">
+      <span class="bus-popup-label">Vehicle</span>
+      <span class="bus-popup-value">${vehicle}</span>
+    </div>
+    <div class="bus-popup-row">
+      <span class="bus-popup-label">Trip</span>
+      <span class="bus-popup-value bus-popup-trip">${trip}</span>
+    </div>
+    <div class="bus-popup-row">
+      <span class="bus-popup-label">Speed</span>
+      <span class="bus-popup-value">${speed}</span>
+    </div>
+  </div>
+</div>`;
 }
 
 function createBusIcon(isTrackedOrSelected) {
