@@ -454,6 +454,27 @@ body {
   font-size: clamp(0.67rem, 1.05vh, 0.75rem);
 }
 
+@supports (view-transition-name: none) {
+  .app-main-grid {
+    view-transition-name: app-main-grid;
+  }
+
+  .app-map-panel {
+    view-transition-name: app-map-panel;
+  }
+
+  .app-stops-panel {
+    view-transition-name: app-stops-panel;
+  }
+
+  ::view-transition-group(app-main-grid),
+  ::view-transition-group(app-map-panel),
+  ::view-transition-group(app-stops-panel) {
+    animation-duration: 220ms;
+    animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  }
+}
+
 @media (max-width: 1023px) {
   .app-map-panel {
     min-height: clamp(18rem, 50vh, 28rem);

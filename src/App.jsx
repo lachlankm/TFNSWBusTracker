@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import BusMap from "./components/BusMap";
 import SearchBar from "./components/SearchBar";
 import StopsPanel from "./components/StopsPanel";
@@ -28,6 +29,18 @@ function busMatchesSearch(bus, normalizedQuery) {
   if (!normalizedQuery) return true;
   const publicName = getPublicRouteName(bus.routeId).toLowerCase();
   return publicName.includes(normalizedQuery);
+}
+
+function supportsViewTransitions() {
+  if (typeof document === "undefined" || typeof window === "undefined") {
+    return false;
+  }
+
+  if (typeof document.startViewTransition !== "function") {
+    return false;
+  }
+
+  return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 export default function App() {
@@ -256,6 +269,19 @@ export default function App() {
     }
   }, []);
 
+  const handleToggleStopsPanel = useCallback(() => {
+    if (!supportsViewTransitions()) {
+      setIsStopsCollapsed((current) => !current);
+      return;
+    }
+
+    document.startViewTransition(() => {
+      flushSync(() => {
+        setIsStopsCollapsed((current) => !current);
+      });
+    });
+  }, []);
+
   return (
     <main className="app-shell">
       <div className="mx-auto grid min-h-[100dvh] w-full max-w-7xl grid-rows-[auto_auto_auto_auto] gap-3 px-3 py-3 sm:px-4 sm:py-4 lg:h-[100dvh] lg:grid-rows-[auto_auto_minmax(0,1fr)_auto] lg:overflow-hidden lg:max-w-[108rem] lg:px-5 lg:py-5 3xl:max-w-[128rem] 3xl:px-6 4xl:max-w-[152rem]">
@@ -318,7 +344,7 @@ export default function App() {
                 className={`h-btn h-btn-primary app-collapse-btn ${
                   isStopsCollapsed ? "is-collapsed" : ""
                 }`}
-                onClick={() => setIsStopsCollapsed((current) => !current)}
+                onClick={handleToggleStopsPanel}
                 aria-expanded={!isStopsCollapsed}
                 aria-controls="stops-panel-body"
                 aria-label={isStopsCollapsed ? "Expand stops panel" : "Collapse stops panel"}
