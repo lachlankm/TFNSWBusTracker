@@ -46,7 +46,13 @@ function uniqueById(items) {
   });
 }
 
-export function buildNextDepartures({ bus, tripUpdates, nowMs = Date.now(), limit = MAX_DEFAULT_DEPARTURES }) {
+export function buildNextDepartures({
+  bus,
+  tripUpdates,
+  nowMs = Date.now(),
+  limit = MAX_DEFAULT_DEPARTURES,
+  includeRouteFallback = true,
+}) {
   // Keep this normalized model source-agnostic so GTFS static timetable data can be merged later.
   if (!bus) {
     return {
@@ -95,7 +101,7 @@ export function buildNextDepartures({ bus, tripUpdates, nowMs = Date.now(), limi
     }
   }
 
-  if (bus.routeId) {
+  if (includeRouteFallback && bus.routeId) {
     const routeMatches = updates.filter((update) => update.routeId && update.routeId === bus.routeId);
     if (routeMatches.length) {
       const items = uniqueById(
