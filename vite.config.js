@@ -9,6 +9,17 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       proxy: {
+        "/api/gtfs-static": {
+          target: "https://api.transport.nsw.gov.au/v1/gtfs/schedule",
+          changeOrigin: true,
+          secure: true,
+          rewrite: (path) => path.replace(/^\/api\/gtfs-static/, ""),
+          headers: tfnswApiKey
+            ? {
+                Authorization: `apikey ${tfnswApiKey}`,
+              }
+            : undefined,
+        },
         "/api/gtfs": {
           target: "https://api.transport.nsw.gov.au/v1/gtfs",
           changeOrigin: true,

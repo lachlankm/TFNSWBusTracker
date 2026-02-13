@@ -8,6 +8,7 @@ A web app that tracks live buses around Sydney using the TFNSW GTFS real-time ve
 - Search bar for route number/id
 - Live bus list with route and speed
 - Next departures panel based on GTFS trip updates
+- Stop names resolved from GTFS static `stops.txt`
 - Auto refresh every 20 seconds
 
 ## TFNSW API setup
@@ -27,18 +28,19 @@ You need a TFNSW Open Data API key.
 The app defaults to the Vite proxy endpoints:
 - `/api/gtfs/vehiclepos/buses`
 - `/api/gtfs/realtime/buses`
+- `/api/gtfs-static/buses`
 
 ## Run
 
 ```bash
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 
 ## Troubleshooting: "Failed to fetch"
 
-- If you are using `npm run dev`:
+- If you are using `bun run dev`:
   - Put `TFNSW_API_KEY=your_key_here` in `.env`
   - Restart Vite after editing `.env`
 - If you are running a static build (not Vite dev server):

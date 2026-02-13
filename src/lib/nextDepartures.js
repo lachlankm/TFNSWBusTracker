@@ -1,12 +1,16 @@
 const MAX_DEFAULT_DEPARTURES = 6;
 const MIN_PAST_GRACE_MS = 60_000;
 
-function normalizeDeparture(departure, matchType) {
+function normalizeDeparture(departure, matchType, stopNamesById) {
+  const stopId = departure.stopId || "";
+  const stopName = stopId && stopNamesById instanceof Map ? stopNamesById.get(stopId) || "" : "";
+
   return {
-    id: `${departure.tripId}:${departure.stopId}:${departure.eventTimeMs}`,
+    id: `${departure.tripId}:${stopId}:${departure.eventTimeMs}`,
     routeId: departure.routeId,
     tripId: departure.tripId,
-    stopId: departure.stopId,
+    stopId,
+    stopName,
     stopSequence: departure.stopSequence,
     eventTimeMs: departure.eventTimeMs,
     vehicleId: departure.vehicleId,
@@ -16,7 +20,7 @@ function normalizeDeparture(departure, matchType) {
   };
 }
 
-function flattenTripUpdateStops(update, nowMs, matchType) {
+function flattenTripUpdateStops(update, nowMs, matchType, stopNamesById) {
   return (update.stops || [])
     .filter((stop) => stop.eventTimeMs >= nowMs - MIN_PAST_GRACE_MS)
     .map((stop) =>
@@ -30,7 +34,8 @@ function flattenTripUpdateStops(update, nowMs, matchType) {
           stopSequence: stop.stopSequence ?? null,
           eventTimeMs: stop.eventTimeMs,
         },
-        matchType
+        matchType,
+        stopNamesById
       )
     );
 }
@@ -49,6 +54,7 @@ function uniqueById(items) {
 export function buildNextDepartures({
   bus,
   tripUpdates,
+  stopNamesById = null,
   nowMs = Date.now(),
   limit = MAX_DEFAULT_DEPARTURES,
   includeRouteFallback = true,
@@ -72,7 +78,7 @@ export function buildNextDepartures({
   if (bus.tripId) {
     const tripMatch = updates.find((update) => update.tripId && update.tripId === bus.tripId);
     if (tripMatch) {
-      const items = flattenTripUpdateStops(tripMatch, nowMs, "trip").slice(0, limit);
+      const items = flattenTripUpdateStops(tripMatch, nowMs, "trip", stopNamesById).slice(0, limit);
       if (items.length) {
         return {
           basis: "trip",
@@ -89,7 +95,7 @@ export function buildNextDepartures({
     if (vehicleMatches.length) {
       const items = uniqueById(
         vehicleMatches
-          .flatMap((update) => flattenTripUpdateStops(update, nowMs, "vehicle"))
+          .flatMap((update) => flattenTripUpdateStops(update, nowMs, "vehicle", stopNamesById))
           .sort((a, b) => a.eventTimeMs - b.eventTimeMs)
       ).slice(0, limit);
       if (items.length) {
@@ -106,7 +112,7 @@ export function buildNextDepartures({
     if (routeMatches.length) {
       const items = uniqueById(
         routeMatches
-          .flatMap((update) => flattenTripUpdateStops(update, nowMs, "route"))
+          .flatMap((update) => flattenTripUpdateStops(update, nowMs, "route", stopNamesById))
           .sort((a, b) => a.eventTimeMs - b.eventTimeMs)
       ).slice(0, limit);
       if (items.length) {

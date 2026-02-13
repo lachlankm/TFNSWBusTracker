@@ -5,6 +5,7 @@ import StopsPanel from "./components/StopsPanel";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { buildNextDepartures } from "./lib/nextDepartures";
 import { fetchSydneyBuses } from "./lib/tfnswApi";
+import { fetchStopNamesById } from "./lib/tfnswStaticStopsApi";
 import { fetchBusTripUpdates } from "./lib/tfnswTripUpdatesApi";
 
 const REFRESH_INTERVAL_MS = 20_000;
@@ -31,6 +32,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tripUpdatesError, setTripUpdatesError] = useState("");
+  const [stopNamesError, setStopNamesError] = useState("");
+  const [stopNamesById, setStopNamesById] = useState(null);
   const [lastUpdatedMs, setLastUpdatedMs] = useState(0);
   const [isStopsCollapsed, setIsStopsCollapsed] = useState(false);
 
@@ -113,6 +116,30 @@ export default function App() {
     };
   }, [loadBuses]);
 
+  useEffect(() => {
+    let isActive = true;
+
+    fetchStopNamesById()
+      .then((stopNamesLookup) => {
+        if (!isActive) {
+          return;
+        }
+        setStopNamesById(stopNamesLookup);
+        setStopNamesError("");
+      })
+      .catch((loadError) => {
+        if (!isActive || loadError?.name === "AbortError") {
+          return;
+        }
+        setStopNamesById(null);
+        setStopNamesError(loadError?.message || "Unable to load stop names.");
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   const normalizedSearchQuery = useMemo(() => searchInput.trim().toLowerCase(), [searchInput]);
   const mapSearchQuery = useDebouncedValue(normalizedSearchQuery, MAP_SEARCH_DEBOUNCE_MS);
 
@@ -151,10 +178,16 @@ export default function App() {
       buildNextDepartures({
         bus: departuresTargetBus,
         tripUpdates,
+        stopNamesById,
         includeRouteFallback: false,
         limit: 10,
       }),
-    [departuresTargetBus, tripUpdates]
+    [departuresTargetBus, stopNamesById, tripUpdates]
+  );
+
+  const stopsPanelError = useMemo(
+    () => [tripUpdatesError, stopNamesError].filter(Boolean).join(" | "),
+    [stopNamesError, tripUpdatesError]
   );
 
   const activeRouteCount = useMemo(() => {
@@ -240,7 +273,7 @@ export default function App() {
                 bus={departuresTargetBus}
                 departuresModel={departuresModel}
                 loading={loading}
-                error={tripUpdatesError}
+                error={stopsPanelError}
               />
             </div>
           </aside>

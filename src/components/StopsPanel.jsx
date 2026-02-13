@@ -49,7 +49,7 @@ export default function StopsPanel({ bus, departuresModel, loading, error }) {
             <li key={departure.id} className="app-stops-row">
               <div>
                 <p className="app-stops-stop">
-                  Stop {departure.stopId || "Unknown"}
+                  {departure.stopName || departure.stopId || "Unknown stop"}
                   {Number.isFinite(departure.stopSequence) ? ` (#${departure.stopSequence})` : ""}
                 </p>
                 <p className="app-stops-trip">Trip {departure.tripId || "N/A"}</p>

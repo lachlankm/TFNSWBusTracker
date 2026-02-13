@@ -69,7 +69,7 @@ export default function NextDeparturesPanel({
             <li key={departure.id} className="flex items-center justify-between gap-3 px-3 py-2">
               <div>
                 <p className="text-sm font-medium text-slate-900">
-                  Stop {departure.stopId || "Unknown"}
+                  {departure.stopName || departure.stopId || "Unknown stop"}
                   {Number.isFinite(departure.stopSequence) ? ` (#${departure.stopSequence})` : ""}
                 </p>
                 <p className="text-xs text-slate-500">Trip {departure.tripId || "N/A"}</p>
