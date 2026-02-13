@@ -1,58 +1,138 @@
-# Sydney Bus Tracker (React + Tailwind + Vite)
+# Sydney Bus Tracker
 
-A web app that tracks live buses around Sydney using the TFNSW GTFS real-time vehicle positions API.
+Real-time Sydney bus tracking app built with React, Vite, Leaflet, and Tailwind CSS.
 
-## Features
+It consumes Transport for NSW (TFNSW) GTFS-Realtime feeds for:
+- vehicle positions
+- trip updates (upcoming stops/departures)
 
-- Real-time bus markers on a Sydney map
-- Search bar for route number/id
-- Live bus list with route and speed
-- Next departures panel based on GTFS trip updates
-- Stop names resolved on-demand through a server-cached GTFS static `stops.txt`
-- Auto refresh every 20 seconds
+## What the app does
 
-## TFNSW API setup
+- Shows live bus markers on an interactive OpenStreetMap map
+- Highlights and tracks a selected bus (map auto-pans while tracking)
+- Lets you search by route (e.g. `333`, `B1`, `M30`)
+- Displays upcoming stops for the selected/tracked bus using GTFS trip updates
+- Resolves stop IDs to stop names through a local proxy endpoint
+- Refreshes live data automatically
+- Provides clear fetch fallback/error diagnostics when endpoints fail
 
-You need a TFNSW Open Data API key.
+## Tech stack
 
-1. Copy `.env.example` to `.env`.
-2. Set one of these options:
+- React 18 + Vite
+- Tailwind CSS
+- Leaflet + React Leaflet
+- `protobufjs` (decode GTFS-Realtime protobuf)
+- `papaparse` + `fflate` (parse/cached GTFS static `stops.txt` from CSV/ZIP)
 
-- Recommended for local dev proxy:
-  - `TFNSW_API_KEY=your_key_here`
-- Direct browser call:
-  - `VITE_TFNSW_VEHICLE_POSITIONS_URL=https://api.transport.nsw.gov.au/v1/gtfs/vehiclepos/buses`
-  - `VITE_TFNSW_TRIP_UPDATES_URL=https://api.transport.nsw.gov.au/v1/gtfs/realtime/buses`
-  - `VITE_TFNSW_API_KEY=your_key_here`
+## Project structure
 
-The app defaults to the Vite proxy endpoints:
+```text
+src/
+  components/
+    BusMap.jsx              # map, markers, tracking/selection UX
+    SearchBar.jsx
+    StopsPanel.jsx          # upcoming stops/departures panel
+  hooks/
+    useDebouncedValue.js
+  lib/
+    gtfsRealtime.js         # protobuf schema + decoders
+    tfnswApi.js             # vehicle positions fetch + fallback plan
+    tfnswTripUpdatesApi.js  # trip updates fetch + fallback plan
+    nextDepartures.js       # match + normalize upcoming departures
+    tfnswStaticStopsApi.js  # stop name lookup client with caching/chunking
+stopNamesProxyPlugin.js     # Vite middleware for /api/stop-names
+vite.config.js              # proxy + plugin wiring
+```
+
+## Prerequisites
+
+- Node.js 18+ (or Bun)
+- A TFNSW Open Data API key
+
+## Environment setup
+
+1. Copy `.env.example` to `.env`
+2. Choose one of the modes below
+
+### Recommended (local dev proxy mode)
+
+Use a server-side key in Vite dev:
+
+```env
+TFNSW_API_KEY=your_key_here
+```
+
+This enables local proxy access to:
 - `/api/gtfs/vehiclepos/buses`
 - `/api/gtfs/realtime/buses`
 - `/api/stop-names?ids=...`
 
-## Run
+### Direct browser mode (for deployments without a proxy)
+
+```env
+VITE_TFNSW_API_KEY=your_key_here
+VITE_TFNSW_VEHICLE_POSITIONS_URL=https://api.transport.nsw.gov.au/v1/gtfs/vehiclepos/buses
+VITE_TFNSW_TRIP_UPDATES_URL=https://api.transport.nsw.gov.au/v1/gtfs/realtime/buses
+```
+
+Notes:
+- If URLs are omitted, default TFNSW endpoints are used.
+- Any `VITE_` key is exposed to the browser, so prefer proxy mode in local/dev.
+
+## Run locally
+
+Using npm:
+
+```bash
+npm install
+npm run dev
+```
+
+Using Bun:
 
 ```bash
 bun install
 bun run dev
 ```
 
+Then open the local Vite URL shown in your terminal.
 
-## Troubleshooting: "Failed to fetch"
+## Build and preview
 
-- If you are using `bun run dev`:
-  - Put `TFNSW_API_KEY=your_key_here` in `.env`
-  - Restart Vite after editing `.env`
-- If you are running a static build (not Vite dev server):
-  - Put `VITE_TFNSW_API_KEY=your_key_here` in `.env`
-  - Optionally set `VITE_TFNSW_VEHICLE_POSITIONS_URL=https://api.transport.nsw.gov.au/v1/gtfs/vehiclepos/buses`
-- Open browser devtools Network tab and check the failed request URL:
-  - `/api/gtfs/vehiclepos/buses` means proxy mode
-  - `https://api.transport.nsw.gov.au/...` means direct mode
-- The app now reports detailed endpoint attempts in the error message to help diagnose key/proxy issues.
+```bash
+npm run build
+npm run preview
+```
 
-## Notes
+## Data + matching behavior
 
-- The feed is GTFS-realtime protobuf and is decoded client-side.
-- Buses are filtered to a Greater Sydney bounding box to focus the map and list.
-- Next departures currently come from GTFS `tripupdates`; this data layer is intentionally separate so full static-timetable support can be added later.
+- Vehicle positions are filtered to a Greater Sydney bounding box before rendering.
+- Upcoming stops are matched in this order:
+  1. exact `trip_id`
+  2. `vehicle_id`
+  3. (optional model fallback) `route_id`
+- Stop names are loaded on demand through `/api/stop-names`, cached, and requested in chunks.
+
+## Troubleshooting
+
+### "Failed to fetch" / no buses shown
+
+- In dev proxy mode, confirm `TFNSW_API_KEY` is set in `.env`
+- Restart the Vite server after changing `.env`
+- Check browser Network tab:
+  - `/api/gtfs/...` indicates proxy mode
+  - `https://api.transport.nsw.gov.au/...` indicates direct mode
+- Read the in-app error message; it includes endpoint attempts and failure details
+
+### Stops panel shows IDs instead of names
+
+- Stop names come from `/api/stop-names`; verify the dev server is running
+- Confirm your TFNSW key has access to GTFS static schedule endpoints
+- Retry after a refresh; unresolved IDs are tracked and cached
+
+## Roadmap ideas
+
+- Route polylines and stop markers
+- Better filtering/sorting controls
+- Historical playback
+- Static timetable enrichment and service alerts
