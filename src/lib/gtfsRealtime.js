@@ -95,6 +95,22 @@ extend transit_realtime.VehicleDescriptor {
 const root = protobuf.parse(GTFS_REALTIME_PROTO).root;
 const FeedMessage = root.lookupType("transit_realtime.FeedMessage");
 
+/**
+ * Extract the public-facing route short name from a TfNSW GTFS routeId.
+ *
+ * TfNSW encodes route IDs as "{operatorCode}_{publicRoute}" (e.g. "2510_N10").
+ * Passengers only see the part after the last underscore ("N10").
+ * If there is no underscore the value is returned as-is.
+ */
+export function getPublicRouteName(routeId) {
+  if (!routeId) return "";
+  const underscoreIndex = routeId.lastIndexOf("_");
+  if (underscoreIndex === -1 || underscoreIndex === routeId.length - 1) {
+    return routeId;
+  }
+  return routeId.slice(underscoreIndex + 1);
+}
+
 function toNumber(value) {
   if (value == null) return null;
   if (typeof value === "number") return value;
@@ -163,9 +179,9 @@ export function decodeBusVehiclePositions(arrayBuffer) {
         return null;
       }
 
-      if (!isInSydneyBounds(lat, lon)) {
-        return null;
-      }
+      // if (!isInSydneyBounds(lat, lon)) {
+      //   return null;
+      // }
 
       const speedMs = toNumber(position.speed);
       const timestamp = toNumber(vehicle.timestamp);

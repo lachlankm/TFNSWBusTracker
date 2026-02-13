@@ -3,12 +3,13 @@ import BusMap from "./components/BusMap";
 import SearchBar from "./components/SearchBar";
 import StopsPanel from "./components/StopsPanel";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
+import { getPublicRouteName } from "./lib/gtfsRealtime";
 import { buildNextDepartures } from "./lib/nextDepartures";
 import { fetchSydneyBuses } from "./lib/tfnswApi";
 import { fetchStopNamesByIds } from "./lib/tfnswStaticStopsApi";
 import { fetchBusTripUpdates } from "./lib/tfnswTripUpdatesApi";
 
-const REFRESH_INTERVAL_MS = 20_000;
+const REFRESH_INTERVAL_MS = 10_000;
 const MAP_SEARCH_DEBOUNCE_MS = 250;
 const DESKTOP_OPEN_COLUMNS = "minmax(0, 7fr) minmax(20rem, 3fr)";
 const DESKTOP_COLLAPSED_COLUMNS = "minmax(0, 1fr) 3.75rem";
@@ -20,7 +21,8 @@ function formatLastUpdated(timestamp) {
 
 function busMatchesSearch(bus, normalizedQuery) {
   if (!normalizedQuery) return true;
-  return (bus.routeId || "").toLowerCase().includes(normalizedQuery);
+  const publicName = getPublicRouteName(bus.routeId).toLowerCase();
+  return publicName.includes(normalizedQuery);
 }
 
 export default function App() {
@@ -229,7 +231,7 @@ export default function App() {
   const trackingStatus = useMemo(() => {
     if (!trackedBusId) return "Tracking: off";
     if (trackedBus) {
-      const route = trackedBus.routeId || "Unknown";
+      const route = getPublicRouteName(trackedBus.routeId) || "Unknown";
       const vehicle = trackedBus.vehicleLabel || trackedBus.vehicleId || "N/A";
       return `Tracking route ${route} (${vehicle})`;
     }
@@ -238,7 +240,7 @@ export default function App() {
 
   const mainGridTemplate = isStopsCollapsed ? DESKTOP_COLLAPSED_COLUMNS : DESKTOP_OPEN_COLUMNS;
   const stopsPanelTitle = departuresTargetBus?.routeId
-    ? `Stops (Route ${departuresTargetBus.routeId})`
+    ? `Stops (Route ${getPublicRouteName(departuresTargetBus.routeId)})`
     : "Stops";
 
   const handleSelectBus = useCallback((busId, options = {}) => {

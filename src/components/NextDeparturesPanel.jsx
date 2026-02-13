@@ -1,3 +1,5 @@
+import { getPublicRouteName } from "../lib/gtfsRealtime";
+
 function formatDepartureClock(timestampMs) {
   return new Date(timestampMs).toLocaleTimeString([], {
     hour: "numeric",
@@ -38,7 +40,7 @@ export default function NextDeparturesPanel({
           <h2 className="text-base font-semibold text-slate-900">Next departures</h2>
           <p className="mt-1 text-xs text-slate-500">
             {bus
-              ? `Route ${bus.routeId || "Unknown"} - ${basisLabel(basis)}`
+              ? `Route ${getPublicRouteName(bus.routeId) || "Unknown"} - ${basisLabel(basis)}`
               : "Select a bus to view upcoming departures"}
           </p>
         </div>

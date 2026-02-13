@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import { MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { getPublicRouteName } from "../lib/gtfsRealtime";
 
 const SYDNEY_CENTER = [-33.8688, 151.2093];
 
@@ -18,7 +19,7 @@ function escapeHtml(value) {
 }
 
 function popupHtml(bus) {
-  const route = escapeHtml(bus.routeId || "Unknown");
+  const route = escapeHtml(getPublicRouteName(bus.routeId) || "Unknown");
   const vehicle = escapeHtml(bus.vehicleLabel || bus.vehicleId || "N/A");
   const model = escapeHtml(bus.vehicleModel || "N/A");
   const trip = escapeHtml(bus.tripId || "N/A");
@@ -26,24 +27,25 @@ function popupHtml(bus) {
 
   return `<div class="bus-popup">
   <div class="bus-popup-header">
-    <!-- <span class="bus-popup-badge">${route}</span> -->
-    <span class="bus-popup-heading">Route ${route}</span>
+  <span class="bus-popup-heading">Route:</span>  
+  <span class="bus-popup-badge">${route}</span>
+    
   </div>
   <div class="bus-popup-body">
     <div class="bus-popup-row">
-      <span class="bus-popup-label">Vehicle</span>
+      <span class="bus-popup-label">Vehicle:</span>
       <span class="bus-popup-value">${vehicle}</span>
     </div>
     <div class="bus-popup-row">
-      <span class="bus-popup-label">Model</span>
+      <span class="bus-popup-label">Model:</span>
       <span class="bus-popup-value">${model}</span>
     </div>
     <div class="bus-popup-row">
-      <span class="bus-popup-label">Trip</span>
+      <span class="bus-popup-label">Trip:</span>
       <span class="bus-popup-value bus-popup-trip">${trip}</span>
     </div>
     <div class="bus-popup-row">
-      <span class="bus-popup-label">Speed</span>
+      <span class="bus-popup-label">Speed:</span>
       <span class="bus-popup-value">${speed}</span>
     </div>
   </div>
@@ -66,8 +68,6 @@ function createBusIcon(isTrackedOrSelected) {
 
 const DEFAULT_BUS_ICON = createBusIcon(false);
 const HIGHLIGHTED_BUS_ICON = createBusIcon(true);
-const POPUP_MIN_WIDTH = 180;
-const POPUP_MAX_WIDTH = 560;
 
 function MapViewportController({ trackedBus }) {
   const map = useMap();
@@ -204,10 +204,7 @@ function EmojiBusLayer({ buses, selectedBusId, trackedBusId, onSelectBus }) {
       if (!marker) {
         marker = L.marker(nextLatLng, { icon: nextIcon });
         marker.on("click", () => onSelectBus(bus.id, { track: true }));
-        marker.bindPopup(nextPopupHtml, {
-          minWidth: POPUP_MIN_WIDTH,
-          maxWidth: POPUP_MAX_WIDTH,
-        });
+        marker.bindPopup(nextPopupHtml);
         marker.addTo(layerGroup);
         markersById.set(bus.id, marker);
         continue;
