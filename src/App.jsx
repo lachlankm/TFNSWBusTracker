@@ -20,6 +20,44 @@ const MAP_THEME_OPTIONS = [
   { value: "dark", label: "CARTO Dark" },
 ];
 
+const UPSTREAM_USER_MESSAGES = {
+  buses: "Live bus data is temporarily unavailable. Please try again in a moment.",
+  tripUpdates: "Trip updates are temporarily unavailable right now.",
+  stopNames: "Some stop names could not be loaded right now.",
+};
+
+function isUpstreamIssue(error) {
+  const statusCode = Number(error?.status);
+  if (Number.isFinite(statusCode) && statusCode >= 500) {
+    return true;
+  }
+
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    message.includes("unable to reach") ||
+    message.includes("network error") ||
+    message.includes("failed to fetch") ||
+    message.includes("bad gateway") ||
+    message.includes("gateway timeout") ||
+    message.includes("service unavailable") ||
+    message.includes("502") ||
+    message.includes("503") ||
+    message.includes("504")
+  );
+}
+
+function getUserFacingError(error, fallbackMessage) {
+  if (isUpstreamIssue(error)) {
+    return fallbackMessage;
+  }
+
+  return error?.message || fallbackMessage;
+}
+
+function logRequestError(context, error) {
+  console.error(`[${context}]`, error);
+}
+
 function formatLastUpdated(timestamp) {
   if (!timestamp) return "Never";
   return new Date(timestamp).toLocaleTimeString();
@@ -85,7 +123,10 @@ export default function App() {
         throw tripUpdatesResult.reason;
       } else {
         setTripUpdates([]);
-        setTripUpdatesError(tripUpdatesResult.reason?.message || "Unable to fetch trip updates.");
+        logRequestError("trip-updates", tripUpdatesResult.reason);
+        setTripUpdatesError(
+          getUserFacingError(tripUpdatesResult.reason, UPSTREAM_USER_MESSAGES.tripUpdates)
+        );
       }
 
       setSelectedBusId((currentSelectedId) => {
@@ -106,7 +147,8 @@ export default function App() {
       });
     } catch (requestError) {
       if (requestError.name !== "AbortError") {
-        setError(requestError.message || "Unable to fetch buses.");
+        logRequestError("buses", requestError);
+        setError(getUserFacingError(requestError, UPSTREAM_USER_MESSAGES.buses));
       }
     } finally {
       setLoading(false);
@@ -217,7 +259,8 @@ export default function App() {
         if (loadError?.name === "AbortError") {
           return;
         }
-        setStopNamesError(loadError?.message || "Unable to load stop names.");
+        logRequestError("stop-names", loadError);
+        setStopNamesError(getUserFacingError(loadError, UPSTREAM_USER_MESSAGES.stopNames));
       });
 
     return () => {
